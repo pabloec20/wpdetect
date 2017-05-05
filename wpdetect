@@ -1,0 +1,70 @@
+import unirest
+import time
+from Queue import Queue
+import random, string
+from threading import Thread, activeCount
+
+domlist = []
+
+# get headers from urls in an input queue and stores them on an output queue
+def get_header(url, OutQueue1):
+	#sets unirest timeout to 10 seconds
+	unirest.timeout(10)
+	#sets headers
+	headers = {"Accept": "application/json"}
+	while not UrlQueue.empty():
+		#gets url from Queue
+		SingleUrl = url.get()+"/wp-content/"
+		# call get service with headers and params and store result
+		try:
+			result = unirest.get(SingleUrl, headers = headers)
+			print SingleUrl+" : "+str(result.code)#put results in the output queue
+			OutQueue1.put(result)
+			url.task_done()
+		except Exception as e:
+			print e
+			OutQueue1.put("ERROR")
+			url.task_done()
+		#signals task done
+		
+	
+
+#function to generate test queues full of urls using httpbin to generate delayed responses
+def enqueue(list):
+	#create queue
+	q = Queue()
+	#fill queue with 100 urls from httpbin
+	for row in list:
+		#put generated urls in url queue
+		q.put(row)
+	#returns url queue
+	return q
+	
+#function that executes a threaded scan receives an input queue of urls and the max threads to use
+def scann(UrlQueue,num_threads):
+	OutQueue1 = Queue()
+	for  i in range(num_threads):
+		print str(UrlQueue.qsize())+" : "+str(activeCount())
+		if not UrlQueue.empty():
+			worker = Thread(target=get_header, args=(UrlQueue,OutQueue1))
+			worker.start()
+	UrlQueue.join()
+	return OutQueue1
+
+#measuring time for performance metrics
+start_time = time.time()	
+
+#generate queue full of urls
+UrlQueue = enqueue(domlist)
+
+
+print 'hey'
+#set maximum number of simultaneous queues
+num_threads = 40
+
+OutQueue = scann(UrlQueue,num_threads)
+print "imprimo cola"
+for elem in list(OutQueue.queue):
+	print elem.body
+print 'fin'
+print str(time.time() - start_time)
